@@ -1,0 +1,84 @@
+#builds the scxml plugins
+name: scxml
+on:
+  workflow_call
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: download scxml
+      run: curl -o scxml/scxmltocode "https://caplugins.blob.core.windows.net/generator/scxmltocode1.9.2"
+    - uses: rymndhng/release-on-push-action@aebba2bbce07a9474bf95e8710e5ee8a9e922fe2 #v0.28.0
+      id: release-on-push
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # tag only pushes to the main branch
+      with:
+        bump_version_scheme: minor
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: download plugins ids files to reuse existing ids#
+      shell: bash +e {0}  # "+e" = don't "fail fast" since we want to check the return code of curl
+      run: |
+        pids=()
+        for file in scxml/*.scxml
+        do
+          idsfile=$(basename ${file%.*}).ids
+          echo downloading $idsfile
+          curl -f -o scxml/$idsfile "${{secrets.BLOB_URL}}$idsfile${{secrets.BLOB_QUERYSTRING}}"&
+          pids+=("$!") #store id of the background process that was just started
+        done
+        #check if all the background processes succeeded
+        for job in "${pids[@]}"
+        do
+            wait $job
+            returnCode=$?
+            if [ "$returnCode" -eq 22 ]
+            then 
+              echo "idsfile not found, skipping";
+            elif [ "$returnCode" -ne 0 ]
+            then
+              echo "An error occurred while downloading file"; 
+              exit 1;
+            fi
+        done
+    - name: generate plugins
+      run: |
+        cd scxml && chmod +x ./scxmltocode && version=${{ steps.release-on-push.outputs.tag_name }} && 
+        version=${version:-v0.0.0} && ./scxmltocode --pluginsversion ${version#v} --savesources &&
+        echo "${version#v}" > latestver.txt
+      shell: bash
+    - name: Zip files for release # we do this as we suspect uploading separate files count as separate requests for github APIs rate limiting
+      if: always()
+      run: zip -r scxml/plugins.zip scxml/*.dll scxml/*.ids scxml/*.cs
+    - name: Release
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # upload only pushes to the main branch
+      uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 #v2.3.3
+      with:
+        files: scxml/plugins.zip
+        tag_name: ${{ steps.release-on-push.outputs.tag_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Archive generated sources on failures
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-sources
+        retention-days: 3
+        path: scxml/plugins.zip
+    - name: upload plugins to blob
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # upload only pushes to the main branch
+      shell: bash
+      run: |
+        pids=()
+        for file in scxml/*.dll scxml/*.ids scxml/latestver.txt
+        do
+          echo uploading $file
+          curl -f -X PUT -H "x-ms-version: 2020-04-08" -H "Content-Type: application/octet-stream" -H "x-ms-blob-type: BlockBlob" \
+            "${{secrets.BLOB_URL}}$(basename $file)${{secrets.BLOB_QUERYSTRING}}" --upload-file "$file"&
+          pids+=("$!") #store id of the background process that was just started
+        done
+        #check if all the background processes succeeded
+        for job in "${pids[@]}"
+        do
+            wait $job || { echo "An error occurred while uploading plugin"; exit 1; }
+        done
