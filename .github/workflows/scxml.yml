@@ -24,7 +24,7 @@ jobs:
         do
           idsfile=$(basename ${file%.*}).ids
           echo downloading $idsfile
-          curl -f -o scxml/$idsfile "${{secrets.BLOB_URL}}$idsfile${{secrets.BLOB_QUERYSTRING}}"&
+          curl -f -o scxml/$idsfile "${{inputs.BLOB_URL}}$idsfile${{secrets.BLOB_QUERYSTRING}}"&
           pids+=("$!") #store id of the background process that was just started
         done
         #check if all the background processes succeeded
@@ -74,7 +74,7 @@ jobs:
         do
           echo uploading $file
           curl -f -X PUT -H "x-ms-version: 2020-04-08" -H "Content-Type: application/octet-stream" -H "x-ms-blob-type: BlockBlob" \
-            "${{secrets.BLOB_URL}}$(basename $file)${{secrets.BLOB_QUERYSTRING}}" --upload-file "$file"&
+            "${{inputs.BLOB_URL}}$(basename $file)${{secrets.BLOB_QUERYSTRING}}" --upload-file "$file"&
           pids+=("$!") #store id of the background process that was just started
         done
         #check if all the background processes succeeded
