@@ -8,8 +8,7 @@ on:
         type: string
     secrets:
       BLOB_QUERYSTRING:
-        required: true
-        type: string
+        required: false
       GITHUB_TOKEN:
         required: true
 jobs:
