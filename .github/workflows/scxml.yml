@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
-    - name: download scxml
+    - name: download scxmltocode
       run: curl -o scxml/scxmltocode "https://caplugins.blob.core.windows.net/generator/scxmltocode1.9.2"
     - uses: rymndhng/release-on-push-action@aebba2bbce07a9474bf95e8710e5ee8a9e922fe2 #v0.28.0
       id: release-on-push
