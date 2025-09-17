@@ -1,7 +1,17 @@
 #builds the scxml plugins
 name: scxml
 on:
-  workflow_call
+  workflow_call:
+    inputs:
+      BLOB_URL:
+        required: true
+        type: string
+    secrets:
+      BLOB_QUERYSTRING:
+        required: true
+        type: string
+      GITHUB_TOKEN:
+        required: true
 jobs:
   build:
     runs-on: ubuntu-latest
