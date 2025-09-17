@@ -9,7 +9,7 @@ on:
     secrets:
       BLOB_QUERYSTRING:
         required: false
-      GITHUB_TOKEN:
+      GH_TOKEN:
         required: true
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
       with:
         bump_version_scheme: minor
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     - name: download plugins ids files to reuse existing ids#
       shell: bash +e {0}  # "+e" = don't "fail fast" since we want to check the return code of curl
       run: |
@@ -66,7 +66,7 @@ jobs:
         files: scxml/plugins.zip
         tag_name: ${{ steps.release-on-push.outputs.tag_name }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     - name: Archive generated sources on failures
       if: failure()
       uses: actions/upload-artifact@v4
