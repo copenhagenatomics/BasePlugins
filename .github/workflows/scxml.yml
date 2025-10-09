@@ -71,7 +71,7 @@ jobs:
 
     - name: generate plugins
       run: |
-        cd scxml && chmod +x ./scxmltocode && ./scxmltocode --pluginsversion ${steps.setver.outputs.version} --savesources &&
+        cd scxml && chmod +x ./scxmltocode && ./scxmltocode --pluginsversion "${{ steps.setver.outputs.version }}" --savesources &&
         echo "${{ steps.setver.outputs.version }}" > latestver.txt
       shell: bash
       
