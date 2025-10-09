@@ -60,7 +60,7 @@ jobs:
       shell: bash
       run: |
         if [ "${{ github.event_name }}" == "pull_request" ]; then
-          version="${{ github.event.pull_request.number }}-${{ github.run_number }}"
+          version="pr${{ github.event.pull_request.number }}-${{ github.run_number }}"
         else
           version="${{ steps.release-on-push.outputs.tag_name }}"
           version="${version#v}"
