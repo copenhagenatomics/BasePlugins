@@ -25,6 +25,7 @@ jobs:
         bump_version_scheme: minor
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        
     - name: download plugins ids files to reuse existing ids#
       shell: bash +e {0}  # "+e" = don't "fail fast" since we want to check the return code of curl
       run: |
@@ -50,15 +51,37 @@ jobs:
               exit 1;
             fi
         done
+    
+    #-------------------
+    # Handle versioning
+    #-------------------
+    - name: Set version
+      id: setver
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          version="${{ github.event.pull_request.number }}-${{ github.run_number }}"
+        else
+          version="${{ steps.release-on-push.outputs.tag_name }}"
+          version="${version#v}"
+          version="${version:-0.0.0}"
+        fi
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "Using version: $version"
+
     - name: generate plugins
       run: |
-        cd scxml && chmod +x ./scxmltocode && version=${{ steps.release-on-push.outputs.tag_name }} && 
-        version=${version:-v0.0.0} && ./scxmltocode --pluginsversion ${version#v} --savesources &&
+        cd scxml && chmod +x ./scxmltocode && ./scxmltocode --pluginsversion ${steps.setver.outputs.version} --savesources &&
         echo "${version#v}" > latestver.txt
       shell: bash
+      
     - name: Zip files for release # we do this as we suspect uploading separate files count as separate requests for github APIs rate limiting
       if: always()
       run: zip -r scxml/plugins.zip scxml/*.dll scxml/*.ids scxml/*.cs
+
+    #------------------------------------------------------
+    # Release assets only for main branch pushes
+    #------------------------------------------------------
     - name: Release
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # upload only pushes to the main branch
       uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 #v2.3.3
@@ -67,6 +90,18 @@ jobs:
         tag_name: ${{ steps.release-on-push.outputs.tag_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    
+    #------------------------------------------------------
+    # Upload assets only for PR pushes
+    #------------------------------------------------------
+    - name: Upload generated sources for PR pushes
+      if: ${{ success() && github.event_name == 'pull_request' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-sources
+        retention-days: 1
+        path: scxml/plugins.zip
+        
     - name: Archive generated sources on failures
       if: failure()
       uses: actions/upload-artifact@v4
@@ -74,12 +109,23 @@ jobs:
         name: generated-sources
         retention-days: 3
         path: scxml/plugins.zip
+        
     - name: upload plugins to blob
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # upload only pushes to the main branch
+      if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') ||  github.event_name == 'pull_request' }}
       shell: bash
       run: |
+        version="${{ steps.setver.outputs.version }}"
         pids=()
-        for file in scxml/*.dll scxml/*.ids scxml/latestver.txt
+        
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "Uploading PR build artifacts..."
+          upload_files=(scxml/*.dll scxml/*"${version}"*.ids)
+        else
+          echo "Uploading main branch release artifacts..."
+          upload_files=(scxml/*.dll scxml/*.ids scxml/latestver.txt)
+        fi
+
+        for file in "${upload_files[@]}";
         do
           echo uploading $file
           curl -f -X PUT -H "x-ms-version: 2020-04-08" -H "Content-Type: application/octet-stream" -H "x-ms-blob-type: BlockBlob" \
