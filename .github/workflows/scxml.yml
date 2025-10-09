@@ -98,7 +98,7 @@ jobs:
       if: ${{ success() && github.event_name == 'pull_request' }}
       uses: actions/upload-artifact@v4
       with:
-        name: generated-sources
+        name: generated-sources-PR
         retention-days: 1
         path: scxml/plugins.zip
         
