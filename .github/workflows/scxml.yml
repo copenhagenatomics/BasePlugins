@@ -119,6 +119,7 @@ jobs:
         
         if [ "${{ github.event_name }}" == "pull_request" ]; then
           echo "Uploading PR build artifacts..."
+          # The pattern scxml/*"${version}"*.ids matches .ids files in scxml/ whose names contain the current version string.
           upload_files=(scxml/*.dll scxml/*"${version}"*.ids)
         else
           echo "Uploading main branch release artifacts..."
