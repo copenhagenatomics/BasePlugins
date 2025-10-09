@@ -72,7 +72,7 @@ jobs:
     - name: generate plugins
       run: |
         cd scxml && chmod +x ./scxmltocode && ./scxmltocode --pluginsversion ${steps.setver.outputs.version} --savesources &&
-        echo "${version#v}" > latestver.txt
+        echo "${{ steps.setver.outputs.version }}" > latestver.txt
       shell: bash
       
     - name: Zip files for release # we do this as we suspect uploading separate files count as separate requests for github APIs rate limiting
