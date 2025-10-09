@@ -138,3 +138,14 @@ jobs:
         do
             wait $job || { echo "An error occurred while uploading plugin"; exit 1; }
         done
+        
+    - name: Add comment to the PR with the version
+      if: ${{ github.event_name == 'pull_request' }} #success() && 
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        header: uploaded-plugins
+        message: |
+          ✅ **Plugins uploaded for PR build**
+
+          **Version:** `${{ steps.setver.outputs.version }}`
