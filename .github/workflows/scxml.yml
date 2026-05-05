@@ -84,7 +84,7 @@ jobs:
     #------------------------------------------------------
     - name: Release
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # upload only pushes to the main branch
-      uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 #v2.3.3
+      uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda #v3.0.0
       with:
         files: scxml/plugins.zip
         tag_name: ${{ steps.release-on-push.outputs.tag_name }}
@@ -96,7 +96,7 @@ jobs:
     #------------------------------------------------------
     - name: Upload generated sources for PR pushes
       if: ${{ success() && github.event_name == 'pull_request' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: generated-sources-PR
         retention-days: 1
@@ -104,7 +104,7 @@ jobs:
         
     - name: Archive generated sources on failures
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: generated-sources
         retention-days: 3
